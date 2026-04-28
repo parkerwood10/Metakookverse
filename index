@@ -1,0 +1,28 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>WSL Fantasy Standings</title>
+  <style>
+    body { font-family: system-ui, Arial; margin: 24px; }
+    table { border-collapse: collapse; width: 100%; max-width: 900px; }
+    th, td { border-bottom: 1px solid #ddd; padding: 10px; text-align: left; }
+  </style>
+</head>
+<body>
+  <h1>WSL Fantasy Standings</h1>
+  <p>Rule: lowest event score dropped (once you have 2+ events).</p>
+
+  <table id="standings">
+    <thead>
+      <tr>
+        <th>Rank</th><th>Team</th><th>Total</th><th>Dropped</th><th>Total (after drop)</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+
+  <script src="app.js"></script>
+</body>
+</html>
