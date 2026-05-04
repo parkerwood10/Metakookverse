@@ -24,8 +24,21 @@
       text-align: center;
       white-space: nowrap;
     }
-    .future { color: #64748b; font-style: italic; }
     
+    th {
+      cursor: pointer;
+      user-select: none;
+      position: relative;
+    }
+    th:hover {
+      background-color: #334155;
+    }
+    .future {
+      color: #64748b;
+      font-style: italic;
+      font-size: 0.82rem;
+      opacity: 0.75;
+    }
     .team-cell {
       text-align: left;
       min-width: 170px;
@@ -41,7 +54,7 @@
     }
 
     @media (max-width: 768px) {
-      th, td { padding: 9px 5px; font-size: 0.92rem; }
+      th, td { padding: 9px 5px; font-size: 0.9rem; }
       .team-name { font-size: 0.95rem; }
       .owner-name { font-size: 0.78rem; }
     }
@@ -58,7 +71,7 @@
     <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
       <div>
         <h2 class="text-2xl md:text-3xl font-semibold">Current Standings</h2>
-        <p class="text-slate-400 text-sm md:text-base">Lowest event dropped after 2+ events</p>
+        <p class="text-slate-400 text-sm md:text-base">Click column headers to sort • Lowest event dropped</p>
       </div>
       <div id="last-updated" class="text-xs md:text-sm text-slate-400"></div>
     </div>
@@ -73,13 +86,11 @@
     </div>
 
     <div id="error" class="hidden mt-8 p-6 bg-red-900/50 border border-red-700 rounded-2xl text-red-200"></div>
-
-    <div class="mt-10 text-center text-slate-500 text-xs md:text-sm">
-      Scroll horizontally → &nbsp; | &nbsp; Update <code class="bg-slate-800 px-2 py-1 rounded">scores.csv</code>
-    </div>
   </div>
 
   <script>
+    let currentSort = { column: 'final', direction: 'desc' }; // default sort
+
     async function loadCSV() {
       const res = await fetch('./scores.csv?' + Date.now());
       if (!res.ok) throw new Error("scores.csv missing");
@@ -134,9 +145,41 @@
           dropped: dropped !== null ? dropped.toFixed(2) : "-",
           final: final.toFixed(2),
           eventScores: scores,
-          events: eventNames
+          events: eventNames,
+          rawTotal: total,
+          rawFinal: final,
+          rawDropped: dropped
         };
-      }).sort((a,b) => parseFloat(b.final) - parseFloat(a.final));
+      });
+    }
+
+    function sortData(data, column, direction) {
+      return [...data].sort((a, b) => {
+        let valA, valB;
+
+        if (column === 'team') {
+          valA = a.team.toLowerCase();
+          valB = b.team.toLowerCase();
+        } else if (column === 'total') {
+          valA = a.rawTotal;
+          valB = b.rawTotal;
+        } else if (column === 'dropped') {
+          valA = a.rawDropped !== null ? a.rawDropped : 999999;
+          valB = b.rawDropped !== null ? b.rawDropped : 999999;
+        } else if (column === 'final') {
+          valA = a.rawFinal;
+          valB = b.rawFinal;
+        } else if (a.events.includes(column)) {
+          valA = a.eventScores[column] !== null ? a.eventScores[column] : -999;
+          valB = b.eventScores[column] !== null ? b.eventScores[column] : -999;
+        } else {
+          return 0;
+        }
+
+        if (valA < valB) return direction === 'asc' ? -1 : 1;
+        if (valA > valB) return direction === 'asc' ? 1 : -1;
+        return 0;
+      });
     }
 
     function renderTable(data) {
@@ -146,15 +189,42 @@
 
       header.innerHTML = `
         <th class="w-10 sticky left-0 bg-slate-800 z-20">#</th>
-        <th class="text-left pl-4 sticky left-10 bg-slate-800 z-20 min-w-[170px]">Team</th>
-        <th class="min-w-[85px] font-medium">Total</th>
-        ${events.map(e => `<th class="min-w-[70px]">${e}</th>`).join('')}
-        <th class="min-w-[80px]">Dropped</th>
-        <th class="font-bold bg-teal-900/60 min-w-[90px]">Final</th>
+        <th class="text-left pl-4 sticky left-10 bg-slate-800 z-20 min-w-[170px]" data-column="team">
+          Team <span class="sort-icon"></span>
+        </th>
+        <th class="min-w-[85px] font-medium" data-column="total">
+          Total <span class="sort-icon"></span>
+        </th>
+        ${events.map(e => `
+          <th class="min-w-[70px]" data-column="${e}">
+            ${e} <span class="sort-icon"></span>
+          </th>`).join('')}
+        <th class="min-w-[80px]" data-column="dropped">
+          Dropped <span class="sort-icon"></span>
+        </th>
+        <th class="font-bold bg-teal-900/60 min-w-[90px]" data-column="final">
+          Final <span class="sort-icon"></span>
+        </th>
       `;
 
+      // Add click handlers
+      header.querySelectorAll('th[data-column]').forEach(th => {
+        th.addEventListener('click', () => {
+          const col = th.getAttribute('data-column');
+          if (currentSort.column === col) {
+            currentSort.direction = currentSort.direction === 'asc' ? 'desc' : 'asc';
+          } else {
+            currentSort.column = col;
+            currentSort.direction = (col === 'team') ? 'asc' : 'desc';
+          }
+          renderTable(data); // re-render with new sort
+        });
+      });
+
+      const sortedData = sortData(data, currentSort.column, currentSort.direction);
+
       tbody.innerHTML = "";
-      data.forEach((row, i) => {
+      sortedData.forEach((row, i) => {
         const tr = document.createElement("tr");
         tr.className = "hover:bg-slate-800/70";
 
@@ -172,21 +242,27 @@
 
         tr.innerHTML = `
           <td class="text-center font-mono text-slate-400 sticky left-0 bg-slate-900">${i+1}</td>
-          
-          <!-- Team + Owner -->
           <td class="text-left pl-4 sticky left-10 bg-slate-900 team-cell">
             <div class="team-name">${row.team}</div>
             <div class="owner-name">${row.owner}</div>
           </td>
-          
-          <!-- Total (moved here) -->
           <td class="font-medium text-slate-300">${row.total}</td>
-          
           ${cells}
           <td class="text-orange-400">${row.dropped}</td>
           <td class="font-bold text-teal-400 text-lg">${row.final}</td>
         `;
         tbody.appendChild(tr);
+      });
+
+      // Update sort icons
+      document.querySelectorAll('.sort-icon').forEach(icon => {
+        const th = icon.parentElement;
+        const col = th.getAttribute('data-column');
+        if (col === currentSort.column) {
+          icon.textContent = currentSort.direction === 'asc' ? '↑' : '↓';
+        } else {
+          icon.textContent = '';
+        }
       });
     }
 
