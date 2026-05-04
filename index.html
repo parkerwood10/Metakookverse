@@ -7,205 +7,155 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css">
   <style>
-    body {
-      background: linear-gradient(135deg, #0f172a 0%, #1e2937 100%);
-      font-family: 'Inter', system-ui, sans-serif;
-    }
+    body { background: linear-gradient(135deg, #0f172a 0%, #1e2937 100%); font-family: system-ui, sans-serif; }
     .wave-bg {
-      background-image: 
-        linear-gradient(rgba(0,0,0,0.75), rgba(0,0,0,0.75)),
-        url('https://images.unsplash.com/photo-1506929562872-bb421503ef8f?ixlib=rb-4.0.3&auto=format&fit=crop&q=80');
-      background-size: cover;
-      background-position: center;
+      background-image: linear-gradient(rgba(0,0,0,0.75), rgba(0,0,0,0.75)), url('https://images.unsplash.com/photo-1506929562872-bb421503ef8f?ixlib=rb-4.0.3&auto=format&fit=crop&q=80');
+      background-size: cover; background-position: center;
     }
-    .table-container {
-      overflow-x: auto;
-      scrollbar-width: thin;
-    }
-    th, td {
-      padding: 12px 10px;
-      text-align: center;
-    }
-    .event-col {
-      font-size: 0.95rem;
-    }
-    .future {
-      color: #64748b;
-      font-style: italic;
-    }
+    .table-container { overflow-x: auto; }
+    th, td { padding: 12px 8px; text-align: center; }
+    .future { color: #64748b; font-style: italic; }
+    .owner-col { font-size: 0.9rem; color: #94a3b8; }
   </style>
 </head>
 <body class="min-h-screen text-white">
-  <!-- Header -->
+
   <div class="wave-bg py-16 text-center">
-    <div class="max-w-6xl mx-auto px-6">
-      <h1 class="text-5xl md:text-6xl font-bold mb-4 tracking-tight">METAKOOKVERSE</h1>
-      <p class="text-3xl text-teal-300 font-light">Fantasy Surf League</p>
-      <div class="mt-6 flex justify-center gap-8 text-sm">
-        <a href="https://fantasy.worldsurfleague.com/fantasy/leagues?leagueCode=AJAUYAKH" 
-           target="_blank" class="flex items-center gap-2 hover:text-teal-400">
-          <i class="fas fa-external-link-alt"></i> Official League
-        </a>
-        <a href="https://github.com/parkerwood10/Metakookverse" 
-           target="_blank" class="flex items-center gap-2 hover:text-teal-400">
-          <i class="fab fa-github"></i> GitHub
-        </a>
-      </div>
-    </div>
+    <h1 class="text-5xl md:text-6xl font-bold">METAKOOKVERSE</h1>
+    <p class="text-3xl text-teal-300">Fantasy Surf League</p>
   </div>
 
   <div class="max-w-7xl mx-auto px-6 py-10">
     <div class="flex justify-between items-center mb-8">
-      <div>
-        <h2 class="text-3xl font-semibold">Current Standings</h2>
-        <p class="text-slate-400">Only completed events count toward totals • Lowest score dropped after 2+ events</p>
-      </div>
+      <h2 class="text-3xl font-semibold">Current Standings</h2>
       <div id="last-updated" class="text-sm text-slate-400"></div>
     </div>
 
-    <div class="table-container bg-slate-900/70 backdrop-blur-lg rounded-2xl overflow-hidden border border-slate-700 shadow-2xl">
-      <table class="w-full text-left" id="standings">
-        <thead class="bg-slate-800 border-b border-slate-700">
-          <tr id="header-row"></tr>
-        </thead>
-        <tbody class="divide-y divide-slate-700 text-slate-200" id="table-body"></tbody>
+    <div class="table-container bg-slate-900/70 backdrop-blur-lg rounded-2xl border border-slate-700">
+      <table class="w-full" id="standings">
+        <thead class="bg-slate-800"><tr id="header-row"></tr></thead>
+        <tbody id="table-body" class="divide-y divide-slate-700"></tbody>
       </table>
     </div>
 
     <div id="error" class="hidden mt-8 p-6 bg-red-900/50 border border-red-700 rounded-2xl text-red-200"></div>
-
-    <div class="mt-12 text-center text-slate-500 text-sm">
-      <p>Update <code class="bg-slate-800 px-2 py-1 rounded">scores.csv</code> after each event</p>
-    </div>
   </div>
 
   <script>
     async function loadCSV() {
-      const response = await fetch('./scores.csv');
-      if (!response.ok) throw new Error('scores.csv not found');
-      const text = await response.text();
+      const res = await fetch('./scores.csv?' + Date.now());
+      if (!res.ok) throw new Error("scores.csv missing");
+      const text = await res.text();
       const lines = text.trim().split(/\r?\n/);
-      const headers = lines[0].split(",").map(s => s.trim());
+      const headers = lines[0].split(",").map(h => h.trim());
       
       return lines.slice(1).map(line => {
-        const cells = line.split(",").map(s => s.trim());
+        const values = line.split(",").map(v => v.trim());
         const row = {};
-        headers.forEach((h, i) => row[h] = cells[i] ?? "");
+        headers.forEach((h, i) => {
+          row[h.toLowerCase()] = values[i] ?? "";   // Normalize keys to lowercase
+        });
         return row;
       });
     }
 
     function toNumber(x) {
-      if (x === "" || x == null) return null;
+      if (!x || x === "" || x === "-" || x === "0") return null;
       const n = Number(x);
-      return Number.isFinite(n) ? n : null;
+      return Number.isFinite(n) && n > 0 ? n : null;
     }
 
     function computeStandings(rows) {
-      if (!rows.length) return [];
-      
-      // Get all event columns (exclude "team" and "Total")
       const eventNames = Object.keys(rows[0]).filter(k => 
-        !["team", "Total"].some(ex => k.toLowerCase() === ex.toLowerCase())
+        !["team", "owner", "total"].includes(k)
       );
 
       return rows.map(r => {
         const scores = {};
-        let completedScores = [];   // Only scores that have actual numbers
+        let completed = [];
 
-        eventNames.forEach(e => {
-          const val = toNumber(r[e]);
-          scores[e] = val;
-          if (val !== null) completedScores.push(val);
+        eventNames.forEach(ev => {
+          const val = toNumber(r[ev]);
+          scores[ev] = val;
+          if (val !== null) completed.push(val);
         });
 
-        // Calculate using ONLY completed events
-        const total = completedScores.reduce((a, b) => a + b, 0);
+        const total = completed.reduce((a,b) => a + b, 0);
         let dropped = null;
-        let totalAfterDrop = total;
+        let final = total;
 
-        if (completedScores.length >= 2) {
-          dropped = Math.min(...completedScores);
-          totalAfterDrop = total - dropped;
+        if (completed.length >= 2) {
+          dropped = Math.min(...completed);
+          final = total - dropped;
         }
 
         return {
           team: r.team || "Unknown",
+          owner: r.owner || "-",
           total: total.toFixed(2),
-          dropped: dropped !== null ? dropped.toFixed(2) : "-",
-          totalAfterDrop: totalAfterDrop.toFixed(2),
+          dropped: dropped ? dropped.toFixed(2) : "-",
+          final: final.toFixed(2),
           eventScores: scores,
-          events: eventNames,
-          completedCount: completedScores.length
+          events: eventNames
         };
-      }).sort((a, b) => parseFloat(b.totalAfterDrop) - parseFloat(a.totalAfterDrop));
+      }).sort((a,b) => parseFloat(b.final) - parseFloat(a.final));
     }
 
-    function renderTable(standings) {
-      if (!standings.length) return;
-
-      const events = standings[0].events;
-      const headerRow = document.getElementById("header-row");
+    function renderTable(data) {
+      const header = document.getElementById("header-row");
       const tbody = document.getElementById("table-body");
+      const events = data[0].events;
 
-      // Build Header
-      headerRow.innerHTML = `
+      header.innerHTML = `
         <th class="w-12">#</th>
         <th class="text-left pl-6">Team</th>
-        ${events.map(e => `<th class="event-col">${e}</th>`).join('')}
-        <th class="text-center">Total</th>
-        <th class="text-center">Dropped</th>
-        <th class="text-center font-bold bg-teal-900/50">Final Score</th>
+        <th class="text-left">Owner</th>
+        ${events.map(e => `<th>${e}</th>`).join('')}
+        <th>Total</th>
+        <th>Dropped</th>
+        <th class="font-bold bg-teal-900/60">Final</th>
       `;
 
-      // Build Rows
       tbody.innerHTML = "";
-      standings.forEach((s, idx) => {
+      data.forEach((row, i) => {
         const tr = document.createElement("tr");
-        tr.className = "hover:bg-slate-800/70 transition-colors";
+        tr.className = "hover:bg-slate-800/70";
 
-        let eventCells = s.events.map(e => {
-          const score = s.eventScores[e];
-          const isCompleted = score !== null;
-          
-          let cellClass = isCompleted ? 'text-slate-300' : 'future';
-          let display = isCompleted ? score.toFixed(2) : '—';
+        let cells = row.events.map(ev => {
+          const score = row.eventScores[ev];
+          if (score === null) return `<td class="future">—</td>`;
 
-          // Highlight dropped score (only among completed events)
-          const completedValues = Object.values(s.eventScores).filter(v => v !== null);
-          const isDropped = isCompleted && completedValues.length >= 2 && 
-                           score === Math.min(...completedValues);
+          const completedVals = Object.values(row.eventScores).filter(v => v !== null);
+          const isDropped = completedVals.length >= 2 && score === Math.min(...completedVals);
 
-          if (isDropped) cellClass = 'text-orange-400 line-through';
-
-          return `<td class="event-col ${cellClass}">${display}</td>`;
-        }).join('');
+          return `<td class="${isDropped ? 'text-orange-400 line-through' : 'text-slate-200'}">
+                    ${score.toFixed(2)}
+                  </td>`;
+        }).join("");
 
         tr.innerHTML = `
-          <td class="text-center font-mono text-slate-400">${idx + 1}</td>
-          <td class="font-semibold text-left pl-6">${s.team}</td>
-          ${eventCells}
-          <td class="text-center text-slate-400">${s.total}</td>
-          <td class="text-center text-orange-400">${s.dropped}</td>
-          <td class="text-center font-bold text-teal-400 text-xl bg-teal-900/30">${s.totalAfterDrop}</td>
+          <td class="text-center font-mono text-slate-400">${i+1}</td>
+          <td class="font-medium text-left pl-6">${row.team}</td>
+          <td class="text-left owner-col">${row.owner}</td>
+          ${cells}
+          <td class="font-medium">${row.total}</td>
+          <td class="text-orange-400">${row.dropped}</td>
+          <td class="font-bold text-teal-400 text-xl">${row.final}</td>
         `;
         tbody.appendChild(tr);
       });
     }
 
     async function main() {
-      const errorDiv = document.getElementById("error");
       try {
         const rows = await loadCSV();
         const standings = computeStandings(rows);
         renderTable(standings);
-
-        document.getElementById("last-updated").textContent = 
-          `Last updated: ${new Date().toLocaleDateString('en-US', { month:'long', day:'numeric', year:'numeric' })}`;
-      } catch (err) {
-        console.error(err);
-        errorDiv.classList.remove("hidden");
-        errorDiv.innerHTML = `⚠️ Could not load <strong>scores.csv</strong>.<br>Make sure the file exists in the root.`;
+        document.getElementById("last-updated").textContent = `Last updated: ${new Date().toLocaleDateString('en-US', {month:'long', day:'numeric'})}`;
+      } catch (e) {
+        console.error(e);
+        document.getElementById("error").classList.remove("hidden");
+        document.getElementById("error").innerHTML = "Error loading scores.csv";
       }
     }
 
