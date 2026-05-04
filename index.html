@@ -53,16 +53,16 @@
         const values = line.split(",").map(v => v.trim());
         const row = {};
         headers.forEach((h, i) => {
-          row[h.toLowerCase()] = values[i] ?? "";   // Normalize keys to lowercase
+          row[h.toLowerCase()] = values[i] ?? "";
         });
         return row;
       });
     }
 
     function toNumber(x) {
-      if (!x || x === "" || x === "-" || x === "0") return null;
+      if (!x || x === "" || x === "-") return null;
       const n = Number(x);
-      return Number.isFinite(n) && n > 0 ? n : null;
+      return Number.isFinite(n) ? n : null;     // ← Now accepts 0 and 000.00
     }
 
     function computeStandings(rows) {
@@ -93,7 +93,7 @@
           team: r.team || "Unknown",
           owner: r.owner || "-",
           total: total.toFixed(2),
-          dropped: dropped ? dropped.toFixed(2) : "-",
+          dropped: dropped !== null ? dropped.toFixed(2) : "-",
           final: final.toFixed(2),
           eventScores: scores,
           events: eventNames
