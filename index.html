@@ -199,4 +199,11 @@
       } catch (e) {
         console.error(e);
         document.getElementById("error").classList.remove("hidden");
-        document.getElementById("
+        document.getElementById("error").innerHTML = "Error loading scores.csv";
+      }
+    }
+
+    window.onload = main;
+  </script>
+</body>
+</html>
