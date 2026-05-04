@@ -17,27 +17,34 @@
       background-size: cover; 
       background-position: center;
     }
-    .table-container { 
-      overflow-x: auto; 
-      scrollbar-width: thin;
-    }
-    table {
-      min-width: 900px; /* Ensures table doesn't collapse too much */
-    }
+    .table-container { overflow-x: auto; scrollbar-width: thin; }
+    
     th, td { 
       padding: 10px 6px; 
       text-align: center;
       white-space: nowrap;
     }
     .future { color: #64748b; font-style: italic; }
-    .owner-col { font-size: 0.85rem; color: #94a3b8; }
     
-    /* Mobile improvements */
+    /* Combined Team + Owner styling */
+    .team-cell {
+      text-align: left;
+      min-width: 160px;
+    }
+    .team-name {
+      font-weight: 600;
+      font-size: 1rem;
+    }
+    .owner-name {
+      font-size: 0.8rem;
+      color: #94a3b8;
+      margin-top: 2px;
+    }
+
     @media (max-width: 768px) {
-      th, td { padding: 8px 4px; font-size: 0.9rem; }
-      .text-5xl { font-size: 2.5rem; }
-      .text-3xl { font-size: 1.75rem; }
-      h2 { font-size: 1.5rem; }
+      th, td { padding: 9px 5px; font-size: 0.92rem; }
+      .team-name { font-size: 0.95rem; }
+      .owner-name { font-size: 0.78rem; }
     }
   </style>
 </head>
@@ -69,7 +76,7 @@
     <div id="error" class="hidden mt-8 p-6 bg-red-900/50 border border-red-700 rounded-2xl text-red-200"></div>
 
     <div class="mt-10 text-center text-slate-500 text-xs md:text-sm">
-      Scroll horizontally → &nbsp; | &nbsp; Update <code class="bg-slate-800 px-2 py-1 rounded">scores.csv</code> after each event
+      Scroll horizontally → &nbsp; | &nbsp; Update <code class="bg-slate-800 px-2 py-1 rounded">scores.csv</code>
     </div>
   </div>
 
@@ -139,9 +146,8 @@
       const events = data[0].events;
 
       header.innerHTML = `
-        <th class="w-10 md:w-12 sticky left-0 bg-slate-800 z-20">#</th>
-        <th class="text-left pl-4 md:pl-6 sticky left-10 md:left-12 bg-slate-800 z-20 min-w-[140px]">Team</th>
-        <th class="text-left pl-3 sticky left-[180px] md:left-[200px] bg-slate-800 z-20 min-w-[110px]">Owner</th>
+        <th class="w-10 sticky left-0 bg-slate-800 z-20">#</th>
+        <th class="text-left pl-4 sticky left-10 bg-slate-800 z-20 min-w-[170px]">Team</th>
         ${events.map(e => `<th class="min-w-[70px]">${e}</th>`).join('')}
         <th class="min-w-[80px]">Total</th>
         <th class="min-w-[80px]">Dropped</th>
@@ -167,12 +173,17 @@
 
         tr.innerHTML = `
           <td class="text-center font-mono text-slate-400 sticky left-0 bg-slate-900">${i+1}</td>
-          <td class="font-medium text-left pl-4 md:pl-6 sticky left-10 md:left-12 bg-slate-900">${row.team}</td>
-          <td class="text-left pl-3 owner-col sticky left-[180px] md:left-[200px] bg-slate-900">${row.owner}</td>
+          
+          <!-- Combined Team + Owner Cell -->
+          <td class="text-left pl-4 sticky left-10 bg-slate-900 team-cell">
+            <div class="team-name">${row.team}</div>
+            <div class="owner-name">${row.owner}</div>
+          </td>
+          
           ${cells}
           <td class="font-medium">${row.total}</td>
           <td class="text-orange-400">${row.dropped}</td>
-          <td class="font-bold text-teal-400 text-lg md:text-xl">${row.final}</td>
+          <td class="font-bold text-teal-400 text-lg">${row.final}</td>
         `;
         tbody.appendChild(tr);
       });
