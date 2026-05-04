@@ -30,9 +30,8 @@
       user-select: none;
       position: relative;
     }
-    th:hover {
-      background-color: #334155;
-    }
+    th:hover { background-color: #334155; }
+
     .future {
       color: #64748b;
       font-style: italic;
@@ -89,7 +88,7 @@
   </div>
 
   <script>
-    let currentSort = { column: 'final', direction: 'desc' }; // default sort
+    let currentSort = { column: 'final', direction: 'desc' };
 
     async function loadCSV() {
       const res = await fetch('./scores.csv?' + Date.now());
@@ -101,9 +100,7 @@
       return lines.slice(1).map(line => {
         const values = line.split(",").map(v => v.trim());
         const row = {};
-        headers.forEach((h, i) => {
-          row[h.toLowerCase()] = values[i] ?? "";
-        });
+        headers.forEach((h, i) => row[h.toLowerCase()] = values[i] ?? "");
         return row;
       });
     }
@@ -163,12 +160,12 @@
         } else if (column === 'total') {
           valA = a.rawTotal;
           valB = b.rawTotal;
-        } else if (column === 'dropped') {
-          valA = a.rawDropped !== null ? a.rawDropped : 999999;
-          valB = b.rawDropped !== null ? b.rawDropped : 999999;
         } else if (column === 'final') {
           valA = a.rawFinal;
           valB = b.rawFinal;
+        } else if (column === 'dropped') {
+          valA = a.rawDropped !== null ? a.rawDropped : 999999;
+          valB = b.rawDropped !== null ? b.rawDropped : 999999;
         } else if (a.events.includes(column)) {
           valA = a.eventScores[column] !== null ? a.eventScores[column] : -999;
           valB = b.eventScores[column] !== null ? b.eventScores[column] : -999;
@@ -195,6 +192,9 @@
         <th class="min-w-[85px] font-medium" data-column="total">
           Total <span class="sort-icon"></span>
         </th>
+        <th class="font-bold bg-teal-900/60 min-w-[90px]" data-column="final">
+          Final <span class="sort-icon"></span>
+        </th>
         ${events.map(e => `
           <th class="min-w-[70px]" data-column="${e}">
             ${e} <span class="sort-icon"></span>
@@ -202,12 +202,9 @@
         <th class="min-w-[80px]" data-column="dropped">
           Dropped <span class="sort-icon"></span>
         </th>
-        <th class="font-bold bg-teal-900/60 min-w-[90px]" data-column="final">
-          Final <span class="sort-icon"></span>
-        </th>
       `;
 
-      // Add click handlers
+      // Click handlers for sorting
       header.querySelectorAll('th[data-column]').forEach(th => {
         th.addEventListener('click', () => {
           const col = th.getAttribute('data-column');
@@ -217,7 +214,7 @@
             currentSort.column = col;
             currentSort.direction = (col === 'team') ? 'asc' : 'desc';
           }
-          renderTable(data); // re-render with new sort
+          renderTable(data);
         });
       });
 
@@ -247,9 +244,9 @@
             <div class="owner-name">${row.owner}</div>
           </td>
           <td class="font-medium text-slate-300">${row.total}</td>
+          <td class="font-bold text-teal-400 text-lg">${row.final}</td>
           ${cells}
           <td class="text-orange-400">${row.dropped}</td>
-          <td class="font-bold text-teal-400 text-lg">${row.final}</td>
         `;
         tbody.appendChild(tr);
       });
