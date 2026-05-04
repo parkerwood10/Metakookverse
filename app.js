@@ -1,11 +1,15 @@
-async function loadCSV(scores) {
-  const text = await (await fetch(path)).text();
+async function loadCSV() {
+  const response = await fetch('./scores.csv');
+  const text = await response.text();
   const lines = text.trim().split(/\r?\n/);
   const headers = lines[0].split(",").map(s => s.trim());
+  
   return lines.slice(1).map(line => {
     const cells = line.split(",").map(s => s.trim());
     const row = {};
-    headers.forEach((h, i) => row[h] = cells[i] ?? "");
+    headers.forEach((h, i) => {
+      row[h] = cells[i] ?? "";
+    });
     return row;
   });
 }
@@ -17,7 +21,9 @@ function toNumber(x) {
 }
 
 function computeStandings(rows) {
-  const eventNames = Object.keys(rows[0]).filter(k => k !== "team");
+  if (!rows || rows.length === 0) return [];
+  
+  const eventNames = Object.keys(rows[0]).filter(k => k !== "team" && k !== "Total");
 
   return rows.map(r => {
     const scores = eventNames
@@ -36,11 +42,11 @@ function computeStandings(rows) {
 
     return {
       team: r.team,
-      total,
-      dropped,
-      totalAfterDrop
+      total: total.toFixed(2),
+      dropped: dropped !== null ? dropped.toFixed(2) : "-",
+      totalAfterDrop: totalAfterDrop.toFixed(2)
     };
-  }).sort((a, b) => b.totalAfterDrop - a.totalAfterDrop);
+  }).sort((a, b) => parseFloat(b.totalAfterDrop) - parseFloat(a.totalAfterDrop));
 }
 
 function renderTable(standings) {
@@ -53,7 +59,7 @@ function renderTable(standings) {
       <td>${idx + 1}</td>
       <td>${s.team}</td>
       <td>${s.total}</td>
-      <td>${s.dropped ?? "-"}</td>
+      <td>${s.dropped}</td>
       <td><b>${s.totalAfterDrop}</b></td>
     `;
     tbody.appendChild(tr);
@@ -61,7 +67,13 @@ function renderTable(standings) {
 }
 
 (async function main() {
-  const rows = await loadCSV("./scores.csv");
-  const standings = computeStandings(rows);
-  renderTable(standings);
+  try {
+    const rows = await loadCSV();
+    const standings = computeStandings(rows);
+    renderTable(standings);
+  } catch (err) {
+    console.error("Error loading standings:", err);
+    document.getElementById("standings").insertAdjacentHTML('afterend', 
+      '<p style="color:red;">Error loading scores.csv — check console (F12)</p>');
+  }
 })();
