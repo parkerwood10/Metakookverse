@@ -1,4 +1,4 @@
-async function loadCSV(scores.csv) {
+async function loadCSV(scores) {
   const text = await (await fetch(path)).text();
   const lines = text.trim().split(/\r?\n/);
   const headers = lines[0].split(",").map(s => s.trim());
