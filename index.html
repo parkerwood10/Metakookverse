@@ -13,50 +13,47 @@
     }
     .wave-bg {
       background-image: 
-        linear-gradient(rgba(0,0,0,0.7), rgba(0,0,0,0.7)),
+        linear-gradient(rgba(0,0,0,0.75), rgba(0,0,0,0.75)),
         url('https://images.unsplash.com/photo-1506929562872-bb421503ef8f?ixlib=rb-4.0.3&auto=format&fit=crop&q=80');
       background-size: cover;
       background-position: center;
     }
+    .table-container {
+      overflow-x: auto;
+      scrollbar-width: thin;
+    }
     table {
-      border-collapse: collapse;
+      min-width: 1200px;
     }
     th, td {
-      padding: 14px 12px;
+      padding: 12px 10px;
+      text-align: center;
     }
-    tr:nth-child(even) {
-      background-color: rgba(255,255,255,0.03);
+    .event-col {
+      font-size: 0.95rem;
     }
   </style>
 </head>
 <body class="min-h-screen text-white">
   <!-- Header -->
   <div class="wave-bg py-16 text-center">
-    <div class="max-w-4xl mx-auto px-6">
-      <h1 class="text-5xl md:text-6xl font-bold mb-4 tracking-tight">
-        METAKOOKVERSE
-      </h1>
-      <p class="text-2xl md:text-3xl text-teal-300 font-light">
-        Fantasy Surf League
-      </p>
-      <div class="mt-6 flex justify-center gap-6 text-sm">
+    <div class="max-w-6xl mx-auto px-6">
+      <h1 class="text-5xl md:text-6xl font-bold mb-4 tracking-tight">METAKOOKVERSE</h1>
+      <p class="text-3xl text-teal-300 font-light">Fantasy Surf League</p>
+      <div class="mt-6 flex justify-center gap-8 text-sm">
         <a href="https://fantasy.worldsurfleague.com/fantasy/leagues?leagueCode=AJAUYAKH" 
-           target="_blank"
-           class="flex items-center gap-2 hover:text-teal-400 transition-colors">
-          <i class="fas fa-external-link-alt"></i>
-          Official League Page
+           target="_blank" class="flex items-center gap-2 hover:text-teal-400">
+          <i class="fas fa-external-link-alt"></i> Official League
         </a>
         <a href="https://github.com/parkerwood10/Metakookverse" 
-           target="_blank"
-           class="flex items-center gap-2 hover:text-teal-400 transition-colors">
-          <i class="fab fa-github"></i>
-          GitHub Repo
+           target="_blank" class="flex items-center gap-2 hover:text-teal-400">
+          <i class="fab fa-github"></i> GitHub
         </a>
       </div>
     </div>
   </div>
 
-  <div class="max-w-6xl mx-auto px-6 py-10">
+  <div class="max-w-7xl mx-auto px-6 py-10">
     <div class="flex justify-between items-center mb-8">
       <div>
         <h2 class="text-3xl font-semibold">Current Standings</h2>
@@ -65,35 +62,30 @@
       <div id="last-updated" class="text-sm text-slate-400"></div>
     </div>
 
-    <!-- Standings Table -->
-    <div class="bg-slate-900/70 backdrop-blur-lg rounded-2xl overflow-hidden border border-slate-700 shadow-2xl">
+    <div class="table-container bg-slate-900/70 backdrop-blur-lg rounded-2xl overflow-hidden border border-slate-700 shadow-2xl">
       <table class="w-full text-left" id="standings">
         <thead class="bg-slate-800 border-b border-slate-700">
-          <tr>
-            <th class="w-12">#</th>
-            <th>Team</th>
-            <th class="text-center">Total Score</th>
-            <th class="text-center">Dropped</th>
-            <th class="text-center font-bold">Final Score</th>
+          <tr id="header-row">
+            <!-- Populated by JavaScript -->
           </tr>
         </thead>
-        <tbody class="divide-y divide-slate-700 text-slate-200"></tbody>
+        <tbody class="divide-y divide-slate-700 text-slate-200" id="table-body">
+          <!-- Populated by JavaScript -->
+        </tbody>
       </table>
     </div>
 
-    <div id="error" class="hidden mt-6 p-4 bg-red-900/50 border border-red-700 rounded-xl text-red-200"></div>
+    <div id="error" class="hidden mt-8 p-6 bg-red-900/50 border border-red-700 rounded-2xl text-red-200"></div>
 
-    <!-- Footer Info -->
     <div class="mt-12 text-center text-slate-500 text-sm">
-      <p>Updated automatically when <code class="bg-slate-800 px-1.5 py-0.5 rounded">scores.csv</code> is pushed</p>
-      <p class="mt-2">Made with ❤️ for the kookiest crew on the WSL</p>
+      <p>Push updates to <code class="bg-slate-800 px-2 py-1 rounded">scores.csv</code> to refresh</p>
     </div>
   </div>
 
   <script>
     async function loadCSV() {
       const response = await fetch('./scores.csv');
-      if (!response.ok) throw new Error('Failed to load scores.csv');
+      if (!response.ok) throw new Error('scores.csv not found');
       const text = await response.text();
       const lines = text.trim().split(/\r?\n/);
       const headers = lines[0].split(",").map(s => s.trim());
@@ -101,9 +93,7 @@
       return lines.slice(1).map(line => {
         const cells = line.split(",").map(s => s.trim());
         const row = {};
-        headers.forEach((h, i) => {
-          row[h] = cells[i] ?? "";
-        });
+        headers.forEach((h, i) => row[h] = cells[i] ?? "");
         return row;
       });
     }
@@ -115,48 +105,80 @@
     }
 
     function computeStandings(rows) {
-      if (!rows || rows.length === 0) return [];
+      if (!rows.length) return [];
       
       const eventNames = Object.keys(rows[0]).filter(k => 
-        k !== "team" && k.toLowerCase() !== "total"
+        !["team", "Total"].some(ex => k.toLowerCase() === ex.toLowerCase())
       );
 
       return rows.map(r => {
-        const scores = eventNames
-          .map(e => toNumber(r[e]))
-          .filter(v => v != null);
+        const scores = {};
+        let numericScores = [];
 
-        const total = scores.reduce((a, b) => a + b, 0);
+        eventNames.forEach(e => {
+          const val = toNumber(r[e]);
+          scores[e] = val;
+          if (val !== null) numericScores.push(val);
+        });
+
+        const total = numericScores.reduce((a, b) => a + b, 0);
         let dropped = null;
         let totalAfterDrop = total;
 
-        if (scores.length >= 2) {
-          dropped = Math.min(...scores);
+        if (numericScores.length >= 2) {
+          dropped = Math.min(...numericScores);
           totalAfterDrop = total - dropped;
         }
 
         return {
-          team: r.team || "Unknown Team",
+          team: r.team || "Unknown",
           total: total.toFixed(2),
           dropped: dropped !== null ? dropped.toFixed(2) : "-",
-          totalAfterDrop: totalAfterDrop.toFixed(2)
+          totalAfterDrop: totalAfterDrop.toFixed(2),
+          eventScores: scores,
+          events: eventNames
         };
       }).sort((a, b) => parseFloat(b.totalAfterDrop) - parseFloat(a.totalAfterDrop));
     }
 
     function renderTable(standings) {
-      const tbody = document.querySelector("#standings tbody");
-      tbody.innerHTML = "";
+      if (!standings.length) return;
 
+      const events = standings[0].events;
+      const headerRow = document.getElementById("header-row");
+      const tbody = document.getElementById("table-body");
+
+      // Build Header
+      headerRow.innerHTML = `
+        <th class="w-12">#</th>
+        <th class="text-left pl-6">Team</th>
+        ${events.map(e => `<th class="event-col">${e}</th>`).join('')}
+        <th class="text-center">Total</th>
+        <th class="text-center">Dropped</th>
+        <th class="text-center font-bold bg-teal-900/50">Final Score</th>
+      `;
+
+      // Build Rows
+      tbody.innerHTML = "";
       standings.forEach((s, idx) => {
         const tr = document.createElement("tr");
         tr.className = "hover:bg-slate-800/70 transition-colors";
+
+        let eventCells = s.events.map(e => {
+          const score = s.eventScores[e];
+          const isDropped = score !== null && score === Math.min(...Object.values(s.eventScores).filter(v => v !== null));
+          return `<td class="event-col ${isDropped ? 'text-orange-400 line-through' : 'text-slate-300'}">
+                    ${score !== null ? score.toFixed(2) : '-'}
+                  </td>`;
+        }).join('');
+
         tr.innerHTML = `
           <td class="text-center font-mono text-slate-400">${idx + 1}</td>
-          <td class="font-medium">${s.team}</td>
+          <td class="font-semibold text-left pl-6">${s.team}</td>
+          ${eventCells}
           <td class="text-center text-slate-400">${s.total}</td>
           <td class="text-center text-orange-400">${s.dropped}</td>
-          <td class="text-center font-bold text-teal-400 text-lg">${s.totalAfterDrop}</td>
+          <td class="text-center font-bold text-teal-400 text-xl bg-teal-900/30">${s.totalAfterDrop}</td>
         `;
         tbody.appendChild(tr);
       });
@@ -168,19 +190,16 @@
         const rows = await loadCSV();
         const standings = computeStandings(rows);
         renderTable(standings);
-        
-        // Update timestamp
+
         document.getElementById("last-updated").textContent = 
-          `Last updated: ${new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}`;
-        
+          `Last updated: ${new Date().toLocaleDateString('en-US', { month:'long', day:'numeric', year:'numeric' })}`;
       } catch (err) {
         console.error(err);
         errorDiv.classList.remove("hidden");
-        errorDiv.textContent = "⚠️ Could not load scores.csv — make sure the file exists in the repository root.";
+        errorDiv.innerHTML = `⚠️ Could not load <strong>scores.csv</strong>.<br>Make sure the file is in the repository root.`;
       }
     }
 
-    // Run on load
     window.onload = main;
   </script>
 </body>
