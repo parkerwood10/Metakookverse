@@ -26,10 +26,9 @@
     }
     .future { color: #64748b; font-style: italic; }
     
-    /* Combined Team + Owner styling */
     .team-cell {
       text-align: left;
-      min-width: 160px;
+      min-width: 170px;
     }
     .team-name {
       font-weight: 600;
@@ -148,8 +147,8 @@
       header.innerHTML = `
         <th class="w-10 sticky left-0 bg-slate-800 z-20">#</th>
         <th class="text-left pl-4 sticky left-10 bg-slate-800 z-20 min-w-[170px]">Team</th>
+        <th class="min-w-[85px] font-medium">Total</th>
         ${events.map(e => `<th class="min-w-[70px]">${e}</th>`).join('')}
-        <th class="min-w-[80px]">Total</th>
         <th class="min-w-[80px]">Dropped</th>
         <th class="font-bold bg-teal-900/60 min-w-[90px]">Final</th>
       `;
@@ -174,14 +173,16 @@
         tr.innerHTML = `
           <td class="text-center font-mono text-slate-400 sticky left-0 bg-slate-900">${i+1}</td>
           
-          <!-- Combined Team + Owner Cell -->
+          <!-- Team + Owner -->
           <td class="text-left pl-4 sticky left-10 bg-slate-900 team-cell">
             <div class="team-name">${row.team}</div>
             <div class="owner-name">${row.owner}</div>
           </td>
           
+          <!-- Total (moved here) -->
+          <td class="font-medium text-slate-300">${row.total}</td>
+          
           ${cells}
-          <td class="font-medium">${row.total}</td>
           <td class="text-orange-400">${row.dropped}</td>
           <td class="font-bold text-teal-400 text-lg">${row.final}</td>
         `;
@@ -198,11 +199,4 @@
       } catch (e) {
         console.error(e);
         document.getElementById("error").classList.remove("hidden");
-        document.getElementById("error").innerHTML = "Error loading scores.csv";
-      }
-    }
-
-    window.onload = main;
-  </script>
-</body>
-</html>
+        document.getElementById("
